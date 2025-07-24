@@ -1,4 +1,4 @@
-# main.py - COMPLETE dengan Manual Cascade Delete Fixed
+# main.py - COMPLETE dengan Manual Cascade Delete Fixed + WIB Support
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
@@ -160,7 +160,7 @@ def create_accident_alert(db: Session, device_id: str, payload_data, confidence:
         return None
 
 # ============================
-# MQTT HANDLER
+# MQTT HANDLER - UPDATED UNTUK WIB
 # ============================
 
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -225,6 +225,12 @@ def on_message(client, userdata, msg):
             existing.moving = schema.moving
             existing.total_g = schema.total_g
             existing.updated_at = now
+            
+            # ===== TAMBAHAN UNTUK WIB =====
+            if hasattr(schema, 'datetime_wib') and schema.datetime_wib:
+                existing.datetime_wib = schema.datetime_wib
+                print(f"[MQTT] {schema.device} | WIB Time: {schema.datetime_wib}")
+            
             db.commit()
         else:
             new_payload = models.Payload(
@@ -244,11 +250,17 @@ def on_message(client, userdata, msg):
                 roll=schema.roll,
                 moving=schema.moving,
                 total_g=schema.total_g,
-                updated_at=now
+                updated_at=now,
+                # ===== TAMBAHAN UNTUK WIB =====
+                datetime_wib=schema.datetime_wib if hasattr(schema, 'datetime_wib') else None,
             )
             db.add(new_payload)
             db.commit()
-        print(f"[MQTT] Data updated for {schema.device}")
+            
+            if new_payload.datetime_wib:
+                print(f"[MQTT] New data for {schema.device} with WIB time: {new_payload.datetime_wib}")
+            else:
+                print(f"[MQTT] Data updated for {schema.device}")
     except Exception as e:
         print(f"[MQTT] Database error for {schema.device}: {e}")
     finally:

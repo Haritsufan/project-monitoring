@@ -1,4 +1,4 @@
-// src/components/AlertPanel.jsx - Updated untuk Real Alerts dari API
+// src/components/AlertPanel.jsx - Simple Fix untuk "7 hours ago"
 import React from 'react';
 
 const AlertPanel = ({ alerts = [], vehicles = [], loading = false, onAlertAction }) => {
@@ -45,10 +45,13 @@ const AlertPanel = ({ alerts = [], vehicles = [], loading = false, onAlertAction
     return actions;
   };
 
+  // ========== SIMPLE FIX: Parse backend UTC timestamp ke WIB ==========
   const formatTime = (timestamp) => {
     try {
-      const date = new Date(timestamp);
-      return date.toLocaleTimeString();
+      // Backend kirim ISO string UTC, kita parse dan convert ke WIB
+      const utcDate = new Date(timestamp);
+      const wibDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000)); // +7 hours untuk WIB
+      return wibDate.toLocaleTimeString('id-ID');
     } catch (e) {
       return 'Unknown time';
     }
@@ -56,17 +59,24 @@ const AlertPanel = ({ alerts = [], vehicles = [], loading = false, onAlertAction
 
   const formatDate = (timestamp) => {
     try {
-      const date = new Date(timestamp);
+      // Backend kirim ISO string UTC, kita parse dan convert ke WIB
+      const utcDate = new Date(timestamp);
+      const wibDate = new Date(utcDate.getTime() + (7 * 60 * 60 * 1000)); // +7 hours untuk WIB
       const now = new Date();
-      const diffInHours = (now - date) / (1000 * 60 * 60);
       
-      if (diffInHours < 1) {
-        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-        return diffInMinutes <= 1 ? 'Just now' : `${diffInMinutes} minutes ago`;
+      const diffInMs = now - wibDate;
+      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+      
+      if (diffInMinutes < 1) {
+        return 'Just now';
+      } else if (diffInMinutes < 60) {
+        return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
       } else if (diffInHours < 24) {
-        return `${Math.floor(diffInHours)} hours ago`;
+        return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
       } else {
-        return date.toLocaleDateString();
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
       }
     } catch (e) {
       return 'Unknown time';
@@ -163,9 +173,9 @@ const AlertPanel = ({ alerts = [], vehicles = [], loading = false, onAlertAction
                     </div>
                   )}
                   
-                  {/* Timestamp */}
+                  {/* ========== FIXED TIMESTAMP - SIMPLE VERSION ========== */}
                   <p className="text-xs text-gray-500 mb-3">
-                    {formatDate(alert.createdAt)} at {formatTime(alert.createdAt)}
+                    {formatDate(alert.createdAt)} at {formatTime(alert.createdAt)} WIB
                   </p>
                   
                   {/* Action Buttons */}

@@ -2,6 +2,7 @@ import json
 import time
 import random
 import paho.mqtt.client as mqtt
+from datetime import datetime, timedelta
 
 # Konfigurasi broker MQTT
 MQTT_BROKER = "broker.hivemq.com"
@@ -31,6 +32,23 @@ device_states = {
 # Counter untuk trigger accident secara otomatis
 message_counter = 0
 
+def get_wib_time():
+    """Generate waktu WIB (UTC+7)"""
+    # Simulasi waktu WIB - bisa current time atau custom time untuk testing
+    now = datetime.now() + timedelta(hours=7)  # Convert to WIB
+    
+    wib_data = {
+        "datetime_wib": now.strftime("%d/%m/%Y %H:%M:%S WIB"),
+        "year": now.year,
+        "month": now.month,
+        "day": now.day,
+        "hour_wib": now.hour,
+        "minute": now.minute,
+        "second": now.second
+    }
+    
+    return wib_data
+
 def generate_normal_data(device_id):
     """Generate data normal driving"""
     state = device_states[device_id]
@@ -42,7 +60,8 @@ def generate_normal_data(device_id):
     state["lat"] += delta_lat
     state["lon"] += delta_lon
     
-    return {
+    # Base data
+    base_data = {
         "device": device_id,
         "timestamp": int(time.time()),
         "count": random.randint(0, 100),
@@ -65,12 +84,19 @@ def generate_normal_data(device_id):
         "moving": True,
         "total_g": round(random.uniform(9.5, 10.5), 2),  # Normal total G-force
     }
+    
+    # ===== TAMBAH DATA WIB =====
+    wib_data = get_wib_time()
+    base_data.update(wib_data)
+    
+    return base_data
 
 def generate_accident_data(device_id):
     """Generate data saat accident (high G-force impact)"""
     state = device_states[device_id]
     
-    return {
+    # Base accident data
+    accident_data = {
         "device": device_id,
         "timestamp": int(time.time()),
         "count": random.randint(0, 100),
@@ -93,12 +119,19 @@ def generate_accident_data(device_id):
         "moving": False,  # Vehicle stops after accident
         "total_g": round(random.uniform(20.0, 35.0), 2),  # HIGH total G-force (accident indicator)
     }
+    
+    # ===== TAMBAH DATA WIB =====
+    wib_data = get_wib_time()
+    accident_data.update(wib_data)
+    
+    return accident_data
 
 def generate_post_accident_data(device_id):
     """Generate data setelah accident (vehicle stopped)"""
     state = device_states[device_id]
     
-    return {
+    # Base post-accident data
+    post_data = {
         "device": device_id,
         "timestamp": int(time.time()),
         "count": random.randint(0, 100),
@@ -120,6 +153,12 @@ def generate_post_accident_data(device_id):
         "moving": False,
         "total_g": round(random.uniform(9.5, 10.2), 2),  # Back to normal
     }
+    
+    # ===== TAMBAH DATA WIB =====
+    wib_data = get_wib_time()
+    post_data.update(wib_data)
+    
+    return post_data
 
 def simulate_accident_scenario(device_id):
     """Simulate accident scenario untuk device tertentu"""
@@ -170,9 +209,10 @@ def generate_dummy_data(device_id):
 
 # Kirim data secara bergantian untuk masing-masing device
 try:
-    print("🚗 Starting MQTT Vehicle Simulator...")
+    print("🚗 Starting MQTT Vehicle Simulator with WIB Time Support...")
     print("📊 Normal driving data will be sent...")
     print("🚨 Accident will be auto-triggered every 50 messages for testing")
+    print("🕐 All data includes WIB timezone information")
     print("⏹️  Press Ctrl+C to stop\n")
     
     while True:
@@ -188,7 +228,9 @@ try:
             else:
                 status = "🛑 STOPPED"
             
-            print(f"📡 {status} | {device_id} | Speed: {payload['speed']} km/h | G-Force: {payload['total_g']}g")
+            # Show WIB time in output
+            wib_time = payload["datetime_wib"]
+            print(f"📡 {status} | {device_id} | Speed: {payload['speed']} km/h | G-Force: {payload['total_g']}g | WIB: {wib_time}")
             
             message_counter += 1
             time.sleep(2)  # Slower untuk easier monitoring

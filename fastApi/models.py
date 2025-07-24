@@ -43,6 +43,7 @@ class Payload(Base):
     moving = Column(Boolean)
     total_g = Column(Float)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    datetime_wib = Column(String(50), nullable=True)
 
     # Relasi balik ke Vehicle
     vehicle = relationship("Vehicle", back_populates="payloads")

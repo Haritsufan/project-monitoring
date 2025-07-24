@@ -43,6 +43,7 @@ class MotionPayload(BaseModel):
     roll: float
     moving: bool
     total_g: float
+    datetime_wib: Optional[str] = None
 
 # Alert Schemas
 class AlertBase(BaseModel):
